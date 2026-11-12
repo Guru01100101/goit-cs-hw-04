@@ -5,6 +5,97 @@ import pytest
 import utils
 
 
+# ---------- build_arg_parser ----------
+
+@pytest.fixture
+def parser():
+    return utils.build_arg_parser("test", "workers", 4)
+
+
+def test_parser_defaults(parser):
+    args = utils.parse_cli_args(parser, ["python"])
+    assert args.keywords == ["python"]
+    assert args.directory == Path(".")
+    assert args.workers == 4
+    assert args.pattern == "*.txt"
+
+
+@pytest.mark.parametrize("flag", ["-d", "--dir"])
+@pytest.mark.parametrize("value", [".", "..", "data/sub", "../other", "/abs/path"])
+def test_parser_accepts_relative_and_absolute_dirs(parser, flag, value):
+    assert utils.parse_cli_args(parser, ["python", flag, value]).directory == Path(value)
+
+
+def test_parser_options_before_keywords(parser):
+    args = utils.parse_cli_args(parser, ["-d", "..", "-n", "2", "-p", "*.md", "python"])
+    assert (args.directory, args.workers, args.pattern, args.keywords) == (Path(".."), 2, "*.md", ["python"])
+
+
+def test_parser_options_between_phrase_words(parser):
+    args = utils.parse_cli_args(parser, ["hello", "-d", "..", "world", "-n", "2"])
+    assert args.keywords == ["hello world"]
+    assert (args.directory, args.workers) == (Path(".."), 2)
+
+
+def test_no_args_prints_help_and_exits_0(parser, capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        utils.parse_cli_args(parser, [])
+    assert exc_info.value.code == 0
+    assert "usage:" in capsys.readouterr().out
+
+
+def test_no_args_reads_sys_argv(parser, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["prog", "hello", "world"])
+    assert utils.parse_cli_args(parser).keywords == ["hello world"]
+
+
+@pytest.mark.parametrize("argv", [["-d", "."], ["", "  "]], ids=["only-options", "blank-keywords"])
+def test_options_without_keywords_is_error(parser, argv, capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        utils.parse_cli_args(parser, argv)
+    assert exc_info.value.code == 2
+    assert "не вказано жодного ключового слова" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("tokens", "expected"),
+    [
+        (["python"], ["python"]),
+        (["hello", "world"], ["hello world"]),  # без лапок -> одна фраза
+        (["hello world"], ["hello world"]),
+        (["hello world", "foo bar"], ["hello world", "foo bar"]),  # кожна фраза в лапках
+        (["hello world", "python"], ["hello world", "python"]),
+        (["python", "queue"], ["python queue"]),  # лапки навколо одного слова не видно
+        ([" hello world ", "", "python"], ["hello world", "python"]),  # пробіли по краях, порожні
+        (["hello world", "python", "hello world"], ["hello world", "python"]),  # дублікати
+        ([], []),
+    ],
+    ids=["one-word", "words-join", "one-quoted", "two-quoted", "quoted-and-word",
+         "single-words-join", "strip-and-empty", "duplicates", "empty"],
+)
+def test_parse_keywords(tokens, expected):
+    assert utils.parse_keywords(tokens) == expected
+
+
+def test_help_describes_phrases(parser):
+    help_text = parser.format_help()
+    assert "-d, --dir DIR" in help_text
+    assert 'шукає "hello world" і "foo bar"' in help_text
+
+
+@pytest.mark.parametrize(("cwd", "directory"), [("root", "."), ("root/sub", "..")])
+def test_collect_files_with_relative_dirs(tmp_path, monkeypatch, cwd, directory):
+    """'.' і '..' розв'язуються відносно поточної директорії."""
+    (tmp_path / "root" / "sub").mkdir(parents=True)
+    (tmp_path / "root" / "a.txt").write_text("x", encoding="utf-8")
+    (tmp_path / "root" / "sub" / "b.txt").write_text("x", encoding="utf-8")
+    monkeypatch.chdir(tmp_path / cwd)
+
+    found = utils.collect_files(Path(directory))
+
+    assert sorted(p.resolve() for p in found) == [tmp_path / "root" / "a.txt", tmp_path / "root" / "sub" / "b.txt"]
+
+
 # ---------- split_into_chunks ----------
 
 @pytest.mark.parametrize(

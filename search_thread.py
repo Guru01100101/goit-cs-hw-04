@@ -7,6 +7,7 @@ from utils import (
     build_arg_parser,
     collect_files_or_exit,
     merge_results,
+    parse_cli_args,
     print_errors,
     print_results,
     safe_search_in_file,
@@ -55,11 +56,11 @@ def search_threading(files: list[Path], keywords: list[str], num_threads: int = 
 
 
 def main() -> None:
-    args = build_arg_parser(
+    args = parse_cli_args(build_arg_parser(
         "Багатопотоковий пошук ключових слів у файлах",
         "Кількість потоків (за замовчуванням 4)",
         4,
-    ).parse_args()
+    ))
     files = collect_files_or_exit(args.directory, args.pattern)
     print(f"Знайдено файлів: {len(files)}, потоків: {args.workers}")
 

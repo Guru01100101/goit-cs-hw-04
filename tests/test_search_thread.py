@@ -65,7 +65,7 @@ def test_main_wires_everything(files, mocker, monkeypatch):
     mock_collect = mocker.patch("search_thread.collect_files_or_exit", return_value=files)
     mock_search = mocker.patch("search_thread.search_threading", return_value={"python": ["a.txt"]})
     mock_print_results = mocker.patch("search_thread.print_results")
-    monkeypatch.setattr("sys.argv", ["search_thread.py", "data", "python", "-n", "2", "-p", "*.md"])
+    monkeypatch.setattr("sys.argv", ["search_thread.py", "python", "-d", "data", "-n", "2", "-p", "*.md"])
 
     search_thread.main()
 

@@ -5,14 +5,73 @@ from collections.abc import Iterable
 from pathlib import Path
 
 
+KEYWORDS_EPILOG = """\
+Як задавати запити:
+  Слова без лапок склеюються в ОДНУ фразу:
+    %(prog)s hello world                 -> шукає "hello world"
+  Кожна фраза в лапках — окремий запит:
+    %(prog)s "hello world" "foo bar"     -> шукає "hello world" і "foo bar"
+    %(prog)s "hello world" python        -> шукає "hello world" і "python"
+  Обмеження: лапки навколо одного слова оболонка прибирає, тому
+    %(prog)s "python" "queue"            -> шукає одну фразу "python queue"
+  Принаймні один запит має містити пробіл, щоб запити розділялися.
+
+Приклади:
+  %(prog)s python                        пошук у поточній директорії
+  %(prog)s python -d ..                  пошук у батьківській директорії
+  %(prog)s error handling -d docs -p "*.md" -n 2
+"""
+
+
 def build_arg_parser(description: str, workers_help: str, workers_default: int | None) -> argparse.ArgumentParser:
     """Створює парсер аргументів командного рядка, спільний для обох версій."""
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("directory", type=Path, help="Директорія з текстовими файлами")
-    parser.add_argument("keywords", nargs="+", help="Ключові слова для пошуку")
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=KEYWORDS_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "keywords", nargs="*", metavar="keyword",
+        help="Фраза для пошуку. Слова без лапок — одна фраза; кілька фраз — кожну в лапках (див. нижче)",
+    )
+    parser.add_argument(
+        "-d", "--dir", dest="directory", metavar="DIR", type=Path, default=Path("."),
+        help="Директорія з текстовими файлами: абсолютний або відносний шлях, напр. . чи .. "
+             "(за замовчуванням поточна директорія)",
+    )
     parser.add_argument("-n", "--workers", type=int, default=workers_default, help=workers_help)
     parser.add_argument("-p", "--pattern", default="*.txt", help="Маска файлів (за замовчуванням *.txt)")
     return parser
+
+
+def parse_keywords(tokens: list[str]) -> list[str]:
+    """Перетворює позиційні аргументи на список запитів.
+
+    Оболонка прибирає лапки, тому фрази в лапках видно лише за пробілом усередині аргументу:
+    - жоден аргумент не містить пробілу -> усі слова склеюються в одну фразу;
+    - є аргумент із пробілом -> кожен аргумент є окремим запитом.
+    Порожні запити й дублікати відкидаються, порядок зберігається.
+    """
+    tokens = [t.strip() for t in tokens]
+    if not any(" " in t for t in tokens):
+        tokens = [" ".join(t for t in tokens if t)]
+    return list(dict.fromkeys(t for t in tokens if t))
+
+
+def parse_cli_args(parser: argparse.ArgumentParser, argv: list[str] | None = None) -> argparse.Namespace:
+    """Розбирає аргументи командного рядка.
+
+    Без аргументів виводить довідку і завершує програму. Опції можна змішувати зі словами фрази.
+    """
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv:
+        parser.print_help()
+        sys.exit(0)
+    args = parser.parse_intermixed_args(argv)
+    args.keywords = parse_keywords(args.keywords)
+    if not args.keywords:
+        parser.error("не вказано жодного ключового слова")
+    return args
 
 
 def collect_files(directory: Path, pattern: str = "*.txt") -> list[Path]:

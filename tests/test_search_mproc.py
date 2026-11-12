@@ -141,10 +141,10 @@ def test_main_defaults_to_cpu_count(files, mocker, monkeypatch):
     mock_collect = mocker.patch("search_mproc.collect_files_or_exit", return_value=files)
     mock_search = mocker.patch("search_mproc.search_multiprocessing", return_value={"python": []})
     mock_print_results = mocker.patch("search_mproc.print_results")
-    monkeypatch.setattr("sys.argv", ["search_mproc.py", "data", "python"])
+    monkeypatch.setattr("sys.argv", ["search_mproc.py", "python"])
 
     search_mproc.main()
 
-    mock_collect.assert_called_once_with(Path("data"), "*.txt")
+    mock_collect.assert_called_once_with(Path("."), "*.txt")  # поточна директорія за замовчуванням
     mock_search.assert_called_once_with(files, ["python"], 8)
     assert mock_print_results.call_args.args[2] == "multiprocessing"

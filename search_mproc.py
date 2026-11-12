@@ -8,6 +8,7 @@ from utils import (
     build_arg_parser,
     collect_files_or_exit,
     merge_results,
+    parse_cli_args,
     print_errors,
     print_results,
     safe_search_in_file,
@@ -77,11 +78,11 @@ def search_multiprocessing(files: list[Path], keywords: list[str], num_processes
 
 
 def main() -> None:
-    args = build_arg_parser(
+    args = parse_cli_args(build_arg_parser(
         "Багатопроцесорний пошук ключових слів у файлах",
         "Кількість процесів (за замовчуванням — кількість ядер CPU)",
         None,
-    ).parse_args()
+    ))
     files = collect_files_or_exit(args.directory, args.pattern)
     num_processes = args.workers or mp.cpu_count()
     print(f"Знайдено файлів: {len(files)}, процесів: {num_processes}")
