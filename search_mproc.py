@@ -17,10 +17,10 @@ from utils import (
 
 
 def worker(files: list[Path], keywords: list[str], result_queue: mp.Queue) -> None:
-    """Процес обробляє свою частину файлів і надсилає результат у чергу.
+    """Process worker: process its chunk of files and send the result to the queue.
 
-    У чергу кладеться кортеж (partial_results, errors), де
-    partial_results — словник {ключове_слово: [шляхи]}.
+    Puts a tuple (partial_results, errors) into the queue, where
+    partial_results is a dict {keyword: [paths]}.
     """
     name = mp.current_process().name
     partial: dict[str, list[str]] = defaultdict(list)
@@ -32,16 +32,16 @@ def worker(files: list[Path], keywords: list[str], result_queue: mp.Queue) -> No
                 errors.append(error)
             for kw in found:
                 partial[kw].append(str(path))
-    except Exception as e:  # гарантуємо, що процес завжди щось поверне в чергу
+    except Exception as e:  # make sure the process always puts something into the queue
         errors.append(f"[{name}] Неочікувана помилка: {e!r}")
     finally:
         result_queue.put((dict(partial), errors))
 
 
 def search_multiprocessing(files: list[Path], keywords: list[str], num_processes: int | None = None) -> dict[str, list[str]]:
-    """Шукає ключові слова у файлах за допомогою кількох процесів.
+    """Search files for keywords using multiple processes.
 
-    Повертає словник: ключ — ключове слово, значення — список шляхів до файлів.
+    Return a dict: key is a keyword, value is a list of file paths where it was found.
     """
     if not files or not keywords:
         return {kw: [] for kw in keywords}
@@ -55,14 +55,14 @@ def search_multiprocessing(files: list[Path], keywords: list[str], num_processes
     for p in processes:
         p.start()
 
-    # Спочатку забираємо результати з черги, потім join — інакше можливий deadlock
+    # Drain the queue first, then join; otherwise a deadlock is possible
     partials: list[dict] = []
     errors: list[str] = []
     while len(partials) < len(processes):
         try:
             partial, errs = result_queue.get(timeout=1)
         except queue.Empty:
-            # Якщо всі процеси вже завершились, а даних немає — якийсь процес аварійно впав
+            # All processes have exited but no data arrived: some process crashed
             if not any(p.is_alive() for p in processes) and result_queue.empty():
                 errors.append("Деякі процеси завершились без результату")
                 break

@@ -24,7 +24,7 @@ KEYWORDS_EPILOG = """\
 
 
 def build_arg_parser(description: str, workers_help: str, workers_default: int | None) -> argparse.ArgumentParser:
-    """Створює парсер аргументів командного рядка, спільний для обох версій."""
+    """Build the command-line argument parser shared by both versions."""
     parser = argparse.ArgumentParser(
         description=description,
         epilog=KEYWORDS_EPILOG,
@@ -45,12 +45,12 @@ def build_arg_parser(description: str, workers_help: str, workers_default: int |
 
 
 def parse_keywords(tokens: list[str]) -> list[str]:
-    """Перетворює позиційні аргументи на список запитів.
+    """Turn positional arguments into a list of search queries.
 
-    Оболонка прибирає лапки, тому фрази в лапках видно лише за пробілом усередині аргументу:
-    - жоден аргумент не містить пробілу -> усі слова склеюються в одну фразу;
-    - є аргумент із пробілом -> кожен аргумент є окремим запитом.
-    Порожні запити й дублікати відкидаються, порядок зберігається.
+    The shell strips quotes, so a quoted phrase can only be detected by a space inside an argument:
+    - no argument contains a space -> all words are joined into a single phrase;
+    - at least one argument contains a space -> every argument is a separate query.
+    Empty queries and duplicates are dropped; order is preserved.
     """
     tokens = [t.strip() for t in tokens]
     if not any(" " in t for t in tokens):
@@ -59,9 +59,9 @@ def parse_keywords(tokens: list[str]) -> list[str]:
 
 
 def parse_cli_args(parser: argparse.ArgumentParser, argv: list[str] | None = None) -> argparse.Namespace:
-    """Розбирає аргументи командного рядка.
+    """Parse command-line arguments.
 
-    Без аргументів виводить довідку і завершує програму. Опції можна змішувати зі словами фрази.
+    With no arguments, print help and exit. Options may be intermixed with the phrase words.
     """
     argv = sys.argv[1:] if argv is None else argv
     if not argv:
@@ -75,7 +75,7 @@ def parse_cli_args(parser: argparse.ArgumentParser, argv: list[str] | None = Non
 
 
 def collect_files(directory: Path, pattern: str = "*.txt") -> list[Path]:
-    """Збирає список текстових файлів у директорії (рекурсивно)."""
+    """Collect text files in a directory (recursively)."""
     if not directory.exists():
         raise FileNotFoundError(f"Директорія не існує: {directory}")
     if not directory.is_dir():
@@ -84,7 +84,7 @@ def collect_files(directory: Path, pattern: str = "*.txt") -> list[Path]:
 
 
 def collect_files_or_exit(directory: Path, pattern: str = "*.txt") -> list[Path]:
-    """Те саме, що collect_files, але при помилці виводить повідомлення і завершує програму."""
+    """Same as collect_files, but print an error message and exit on failure."""
     try:
         return collect_files(directory, pattern)
     except (FileNotFoundError, NotADirectoryError, PermissionError) as e:
@@ -93,22 +93,22 @@ def collect_files_or_exit(directory: Path, pattern: str = "*.txt") -> list[Path]
 
 
 def split_into_chunks(items: list, n: int) -> list[list]:
-    """Розподіляє список на n майже рівних частин (порожні частини відкидаються)."""
+    """Split a list into n nearly equal chunks (empty chunks are dropped)."""
     n = max(1, min(n, len(items)))
     k, m = divmod(len(items), n)
     return [items[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
 
 
 def search_in_file(path: Path, keywords: list[str]) -> set[str]:
-    """Повертає множину ключових слів, знайдених у файлі (без урахування регістру)."""
+    """Return the set of keywords found in the file (case-insensitive)."""
     text = path.read_text(encoding="utf-8").lower()
     return {kw for kw in keywords if kw.lower() in text}
 
 
 def safe_search_in_file(path: Path, keywords: list[str], worker_name: str) -> tuple[set[str], str | None]:
-    """Шукає ключові слова у файлі, перехоплюючи помилки файлової системи.
+    """Search a file for keywords, catching file system errors.
 
-    Повертає (знайдені_слова, повідомлення_про_помилку або None).
+    Return (found_keywords, error_message or None).
     """
     try:
         return search_in_file(path, keywords), None
@@ -124,9 +124,9 @@ def safe_search_in_file(path: Path, keywords: list[str], worker_name: str) -> tu
 
 
 def merge_results(partials: Iterable[dict[str, list[str]]], keywords: list[str]) -> dict[str, list[str]]:
-    """Об'єднує часткові результати в один словник {ключове_слово: [шляхи]}.
+    """Merge partial results into a single dict {keyword: [paths]}.
 
-    Кожне ключове слово присутнє в результаті (навіть якщо не знайдене), шляхи відсортовані.
+    Every keyword is present in the result (even if not found); paths are sorted.
     """
     merged: dict[str, list[str]] = defaultdict(list)
     for partial in partials:
@@ -136,13 +136,13 @@ def merge_results(partials: Iterable[dict[str, list[str]]], keywords: list[str])
 
 
 def print_errors(errors: Iterable[str]) -> None:
-    """Виводить повідомлення про помилки у stderr."""
+    """Print error messages to stderr."""
     for msg in errors:
         print(msg, file=sys.stderr)
 
 
 def print_results(results: dict[str, list[str]], elapsed: float, label: str) -> None:
-    """Виводить результати пошуку та час виконання."""
+    """Print search results and execution time."""
     for kw, paths in results.items():
         print(f"\n'{kw}': {len(paths)} файл(ів)")
         for p in paths:

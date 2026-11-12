@@ -11,7 +11,7 @@ FILE_CONTENTS = {
 
 
 def fake_safe_search(path, keywords, worker_name):
-    """Замінник safe_search_in_file: результат беремо зі словника, bad.txt — помилка."""
+    """Stand-in for safe_search_in_file: results come from a dict; bad.txt yields an error."""
     if path.name == "bad.txt":
         return set(), f"[{worker_name}] помилка"
     return FILE_CONTENTS[path.name] & set(keywords), None
@@ -24,7 +24,7 @@ def files() -> list[Path]:
 
 @pytest.fixture
 def make_path(mocker):
-    """Фабрика моків шляху до файлу: read_text повертає text або кидає error."""
+    """Factory of mocked file paths: read_text returns text or raises error."""
 
     def _make(name: str = "file.txt", text: str = "", error: Exception | None = None):
         path = mocker.MagicMock(spec=Path)

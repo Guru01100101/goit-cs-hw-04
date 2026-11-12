@@ -8,10 +8,10 @@ from conftest import fake_safe_search
 
 
 class FakeProcess:
-    """Замінник mp.Process: виконує target синхронно в поточному процесі.
+    """Stand-in for mp.Process: runs target synchronously in the current process.
 
-    Справжні процеси на Windows запускаються через spawn і не бачать моків,
-    тому для юніт-тестів підміняємо Process.
+    Real processes on Windows are started via spawn and don't see mocks,
+    so Process is replaced for unit tests.
     """
 
     instances: list["FakeProcess"] = []
@@ -31,7 +31,7 @@ class FakeProcess:
 
 
 class CrashingProcess(FakeProcess):
-    """Процес, який «падає» і нічого не кладе в чергу."""
+    """A process that "crashes" and puts nothing into the queue."""
 
     def start(self):
         pass
@@ -100,7 +100,7 @@ def test_crashed_process_does_not_hang(files, mocker, mock_print_errors):
 
 
 def test_waits_while_processes_are_still_running(files, mocker, mock_print_errors):
-    """Черга тимчасово порожня, але процес живий — треба чекати далі, а не виходити."""
+    """The queue is temporarily empty but the process is alive: keep waiting instead of exiting."""
     slow_process = mocker.MagicMock()
     slow_process.is_alive.return_value = True
     mocker.patch("search_mproc.mp.Process", return_value=slow_process)
@@ -122,7 +122,7 @@ def test_empty_input_starts_no_processes(mocker):
 
 
 def test_real_processes_with_temp_files(tmp_path, mock_print_errors):
-    """Інтеграційний тест зі справжніми процесами та файлами."""
+    """Integration test with real processes and files."""
     (tmp_path / "a.txt").write_text("Python here", encoding="utf-8")
     (tmp_path / "b.txt").write_text("a Queue", encoding="utf-8")
     (tmp_path / "bad.txt").write_bytes(b"\xff\xfe\x00")
@@ -145,6 +145,6 @@ def test_main_defaults_to_cpu_count(files, mocker, monkeypatch):
 
     search_mproc.main()
 
-    mock_collect.assert_called_once_with(Path("."), "*.txt")  # поточна директорія за замовчуванням
+    mock_collect.assert_called_once_with(Path("."), "*.txt")  # current directory by default
     mock_search.assert_called_once_with(files, ["python"], 8)
     assert mock_print_results.call_args.args[2] == "multiprocessing"

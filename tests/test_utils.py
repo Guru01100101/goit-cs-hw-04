@@ -61,13 +61,13 @@ def test_options_without_keywords_is_error(parser, argv, capsys):
     ("tokens", "expected"),
     [
         (["python"], ["python"]),
-        (["hello", "world"], ["hello world"]),  # без лапок -> одна фраза
+        (["hello", "world"], ["hello world"]),  # no quotes -> one phrase
         (["hello world"], ["hello world"]),
-        (["hello world", "foo bar"], ["hello world", "foo bar"]),  # кожна фраза в лапках
+        (["hello world", "foo bar"], ["hello world", "foo bar"]),  # each phrase quoted
         (["hello world", "python"], ["hello world", "python"]),
-        (["python", "queue"], ["python queue"]),  # лапки навколо одного слова не видно
-        ([" hello world ", "", "python"], ["hello world", "python"]),  # пробіли по краях, порожні
-        (["hello world", "python", "hello world"], ["hello world", "python"]),  # дублікати
+        (["python", "queue"], ["python queue"]),  # quotes around a single word are invisible
+        ([" hello world ", "", "python"], ["hello world", "python"]),  # surrounding spaces, empty tokens
+        (["hello world", "python", "hello world"], ["hello world", "python"]),  # duplicates
         ([], []),
     ],
     ids=["one-word", "words-join", "one-quoted", "two-quoted", "quoted-and-word",
@@ -85,7 +85,7 @@ def test_help_describes_phrases(parser):
 
 @pytest.mark.parametrize(("cwd", "directory"), [("root", "."), ("root/sub", "..")])
 def test_collect_files_with_relative_dirs(tmp_path, monkeypatch, cwd, directory):
-    """'.' і '..' розв'язуються відносно поточної директорії."""
+    """'.' and '..' are resolved relative to the current working directory."""
     (tmp_path / "root" / "sub").mkdir(parents=True)
     (tmp_path / "root" / "a.txt").write_text("x", encoding="utf-8")
     (tmp_path / "root" / "sub" / "b.txt").write_text("x", encoding="utf-8")

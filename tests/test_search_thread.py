@@ -44,7 +44,7 @@ def test_files_are_distributed_between_threads(files, mocker, mock_search, mock_
 
     assert mock_thread.call_count == 3
     chunks = [call.kwargs["args"][0] for call in mock_thread.call_args_list]
-    assert [p for c in chunks for p in c] == files  # кожен файл рівно в одному потоці
+    assert [p for c in chunks for p in c] == files  # each file goes to exactly one thread
     assert mock_search.call_count == len(files)
     worker_names = {call.args[2] for call in mock_search.call_args_list}
     assert worker_names <= {"Thread-1", "Thread-2", "Thread-3"}

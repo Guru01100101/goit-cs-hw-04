@@ -16,7 +16,7 @@ from utils import (
 
 
 def worker(files: list[Path], keywords: list[str], partials: list[dict], errors: list[str], lock: threading.Lock) -> None:
-    """Потік обробляє свою частину файлів і додає свій результат у спільний список."""
+    """Thread worker: process its chunk of files and append the result to the shared list."""
     name = threading.current_thread().name
     partial: dict[str, list[str]] = defaultdict(list)
     local_errors: list[str] = []
@@ -32,9 +32,9 @@ def worker(files: list[Path], keywords: list[str], partials: list[dict], errors:
 
 
 def search_threading(files: list[Path], keywords: list[str], num_threads: int = 4) -> dict[str, list[str]]:
-    """Шукає ключові слова у файлах за допомогою кількох потоків.
+    """Search files for keywords using multiple threads.
 
-    Повертає словник: ключ — ключове слово, значення — список шляхів до файлів.
+    Return a dict: key is a keyword, value is a list of file paths where it was found.
     """
     if not files or not keywords:
         return {kw: [] for kw in keywords}
