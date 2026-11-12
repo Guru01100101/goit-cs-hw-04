@@ -3,8 +3,15 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-from postprocess import merge_results, print_errors, print_results
-from preprocess import build_arg_parser, collect_files_or_exit, safe_search_in_file, split_into_chunks
+from utils import (
+    build_arg_parser,
+    collect_files_or_exit,
+    merge_results,
+    print_errors,
+    print_results,
+    safe_search_in_file,
+    split_into_chunks,
+)
 
 
 def worker(files: list[Path], keywords: list[str], partials: list[dict], errors: list[str], lock: threading.Lock) -> None:
